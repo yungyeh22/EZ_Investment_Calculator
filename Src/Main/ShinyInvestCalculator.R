@@ -180,6 +180,10 @@ server <- shinyServer(function(input, output,session) {
     if (xUnit$v) {
       fArr <- fArr[1,seq(1,length(fArr[1,]),12)]
       noInvestArr <- noInvestArr[1,seq(1,length(noInvestArr[1,]),12)] 
+    } 
+    else  {
+      fArr <- fArr[1,]
+      noInvestArr <- noInvestArr[1,]
     }
     finalF = fArr[length(fArr)]
     
@@ -274,8 +278,8 @@ server <- shinyServer(function(input, output,session) {
     summaryReport <- summaryReport()
     m <- data.frame(0:xNum$v, summaryReport$investArr, summaryReport$noInvestArr, summaryReport$gainDiffArr, summaryReport$gainPercArr*100)
     colnames(m) <- c({if (xUnit$v) "Year" else "Month"}, "Asset ($)", "Baseline ($)", "Gain ($)", "Gain (%)")
-    m
-  },rownames=FALSE )
+    return(m)
+  },rownames=FALSE, colnames=TRUE )
   
   # Plot
   # Todo: Show K if > 1000 in y axis
