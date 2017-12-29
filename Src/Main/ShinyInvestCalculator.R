@@ -222,7 +222,7 @@ server <- shinyServer(function(input, output,session) {
     gainInvFundPercStr <- num2CommasNumString((finalF-f)/f*100,2)
     gainNoInvFundPercStr <- num2CommasNumString((noInvest-f)/f*100,2)
     gainPercStr <- num2CommasNumString(max((finalF-noInvest)/noInvest,-1)*100,2)
-    gainDiffArr <- c(0,diff(fArr))
+    gainDiffArr <- fArr - c(fArrBase[1],fArrBase[1:(length(fArrBase)-1)])
     gainPercArr <- gainDiffArr/c(fArrBase[1],fArrBase[1:(length(fArrBase)-1)])
     gainPercArr[is.infinite(gainPercArr)] <- NA
     gainDiffCumArr <- fArr-noInvestArr
