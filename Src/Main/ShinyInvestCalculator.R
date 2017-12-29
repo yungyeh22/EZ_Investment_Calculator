@@ -177,11 +177,15 @@ server <- shinyServer(function(input, output,session) {
 
     # With investment
     fArr <- cal.compound(f,v,r,b,d,ur,ub,ud)
+    
+    # Organizing
     if (xUnit$v) {
+      fArrBase <- fArr[2,seq(1,length(fArr[2,]),12)]
       fArr <- fArr[1,seq(1,length(fArr[1,]),12)]
-      noInvestArr <- noInvestArr[1,seq(1,length(noInvestArr[1,]),12)] 
+      noInvestArr <- noInvestArr[1,seq(1,length(noInvestArr[1,]),12)]
     } 
     else  {
+      fArrBase <- fArr[2,]
       fArr <- fArr[1,]
       noInvestArr <- noInvestArr[1,]
     }
@@ -218,17 +222,21 @@ server <- shinyServer(function(input, output,session) {
     gainInvFundPercStr <- num2CommasNumString((finalF-f)/f*100,2)
     gainNoInvFundPercStr <- num2CommasNumString((noInvest-f)/f*100,2)
     gainPercStr <- num2CommasNumString(max((finalF-noInvest)/noInvest,-1)*100,2)
-    gainDiffArr <- fArr-noInvestArr
-    gainPercArr <- gainDiffArr/c(noInvestArr[1],noInvestArr[1:(length(noInvestArr)-1)])
+    gainDiffArr <- c(0,diff(fArr))
+    gainPercArr <- gainDiffArr/c(fArrBase[1],fArrBase[1:(length(fArrBase)-1)])
     gainPercArr[is.infinite(gainPercArr)] <- NA
+    gainDiffCumArr <- fArr-noInvestArr
+    gainPercCumArr <- gainDiffCumArr/noInvestArr
+    gainPercCumArr[is.infinite(gainPercCumArr)] <- NA
     payoutStr<- num2CommasNumString(d*v/ifelse(ud,12,1),2)
     
     # list output
-    list(noinvest = noInvestStr, invest = investStr, investArr = fArr, noInvestArr = noInvestArr,
+    list(noinvest = noInvestStr, invest = investStr, investArr = fArr, investArrBase = fArrBase, noInvestArr = noInvestArr,
          gainNoInvFund = gainNoInvFundStr, gainNoInvFundc = gainNoInvFundPercStr,
          gainInvFund = gainInvFundStr, gainInvFundPerc = gainInvFundPercStr,
          gain = gainStr, gainPerc = gainPercStr, 
          gainDiffArr = gainDiffArr, gainPercArr = gainPercArr,
+         gainDiffCumArr = gainDiffCumArr, gainPercCumArr = gainPercCumArr,
          payout = payoutStr)
   })
   # Text box
@@ -276,8 +284,19 @@ server <- shinyServer(function(input, output,session) {
     xNum <- xNum()
     xUnit <- xUnit()
     summaryReport <- summaryReport()
-    m <- data.frame(0:xNum$v, summaryReport$investArr, summaryReport$noInvestArr, summaryReport$gainDiffArr, summaryReport$gainPercArr*100)
-    colnames(m) <- c({if (xUnit$v) "Year" else "Month"}, "Asset ($)", "Baseline ($)", "Gain ($)", "Gain (%)")
+    m <- data.frame(0:xNum$v, summaryReport$investArr, 
+                    summaryReport$noInvestArr, 
+                    summaryReport$gainDiffArr, 
+                    summaryReport$gainPercArr*100,
+                    summaryReport$gainDiffCumArr,
+                    summaryReport$gainPercCumArr*100)
+    colnames(m) <- c({if (xUnit$v) "Year" else "Month"}, 
+                     "Asset ($)", 
+                     "Baseline ($)", 
+                     "Gain ($) (each term)", 
+                     "Gain (%) (each term)",
+                     "Gain ($) (to baseline)",
+                     "Gain (%) (to baseline)")
     return(m)
   },rownames=FALSE, colnames=TRUE )
   
