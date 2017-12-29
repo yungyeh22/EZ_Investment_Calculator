@@ -11,6 +11,7 @@
 # To-Do: Need to account for fail withdrawal 
 # To-Do: Add warning message when componding rate period unit does not match other inputs, such as withdrawal amount period
 # To-Do: Add a smart way to help user to figure how to reach target
+# To-Do: Always use monthly componding rate
 
 library(shiny)
 library(stats)
@@ -31,12 +32,7 @@ cal.compound <- function (f, v, r, b = 0, d = 0, ur = 12, ub = 1, ud = 1) { # ur
   fArr[,1] <- f
   for (inc in 1:v) {
     # Compounding rate
-    if (inc%%ur == 0) { # Time to compound
-      fArr[1,inc+1] <- fArr[2,inc] * (1+r)
-    }
-    else {
-      fArr[1,inc+1] <- fArr[2,inc]
-    }
+    fArr[1,inc+1] <- fArr[2,inc] * (1+r)
     # Increase/decrese fund
     if ((ub == ud) & (ub == TRUE)) { #case1: yearly,yearly
       if (inc%%12 == 0) { # Check at every year end for yearly change
@@ -103,7 +99,7 @@ ui <- shinyUI(fluidPage(
         div(class = "textGroup", style="width:40%", numericInput("niRate", NULL, 3, min = 0, step = 0.01, width = "100%")),
         div(class = "textGroup", style="width:40%", selectInput("siRateUnit",NULL
                                                   ,c("monthly","quartly","semi-annually","annually"), selected = "annually", width = "100%"))),
-    div(class = "rowWrapper",div(class = "inputText", strong("Contribution ($)",br("(End of each term)"))),
+    div(class = "rowWrapper",div(class = "inputText", strong("Contribution ($)",br("(Incurred after end of each term)"))),
         div(class = "textGroup", style="width:40%", numericInput("niCont",NULL, 0, min = 0, step = 10, width = "100%")),
         div(class = "textGroup", style="width:40%", selectInput("siContUnit",NULL,c("monthly","yearly"), width = "100%"))),
     div(class = "rowWrapper",div(class = "inputText", strong("Investment Period")),
@@ -159,12 +155,11 @@ server <- shinyServer(function(input, output,session) {
   summaryReport <- reactive({
     xNum <- xNum()
     xUnit <- xUnit()
-    
     f <- xNum$f
     b <- xNum$b # add
     d <- xNum$d # minus
-    r <- xNum$r/100 # Rate
-    v <- ifelse(xUnit$v, 12 * xNum$v, xNum$v)
+    r <- (xNum$r/100 + 1)^(1/xUnit$r) - 1 # Rate
+    v <- ifelse(xUnit$v, 12 * xNum$v, xNum$v) # always use month
     ur <- xUnit$r
     ub <- xUnit$b
     ud <- xUnit$d
@@ -177,17 +172,14 @@ server <- shinyServer(function(input, output,session) {
 
     # With investment
     fArr <- cal.compound(f,v,r,b,d,ur,ub,ud)
-    
     # Organizing
     if (xUnit$v) {
-      fArrBase <- fArr[2,seq(1,length(fArr[2,]),12)]
-      fArr <- fArr[1,seq(1,length(fArr[1,]),12)]
-      noInvestArr <- noInvestArr[1,seq(1,length(noInvestArr[1,]),12)]
+      fArr <- fArr[2,seq(1,length(fArr[2,]),12)]
+      noInvestArr <- noInvestArr[2,seq(1,length(noInvestArr[2,]),12)]
     } 
     else  {
-      fArrBase <- fArr[2,]
-      fArr <- fArr[1,]
-      noInvestArr <- noInvestArr[1,]
+      fArr <- fArr[2,]
+      noInvestArr <- noInvestArr[2,]
     }
     finalF = fArr[length(fArr)]
     
@@ -222,16 +214,18 @@ server <- shinyServer(function(input, output,session) {
     gainInvFundPercStr <- num2CommasNumString((finalF-f)/f*100,2)
     gainNoInvFundPercStr <- num2CommasNumString((noInvest-f)/f*100,2)
     gainPercStr <- num2CommasNumString(max((finalF-noInvest)/noInvest,-1)*100,2)
-    gainDiffArr <- fArr - c(fArrBase[1],fArrBase[1:(length(fArrBase)-1)])
-    gainPercArr <- gainDiffArr/c(fArrBase[1],fArrBase[1:(length(fArrBase)-1)])
+    # gainDiff = (Current - previous base - contribution)
+    gainDiffArr <- c(0,diff(fArr)) - c(0,diff(noInvestArr))
+    gainPercArr <- gainDiffArr/c(fArr[1],fArr[1:(length(fArr)-1)])
     gainPercArr[is.infinite(gainPercArr)] <- NA
-    gainDiffCumArr <- fArr-noInvestArr
-    gainPercCumArr <- gainDiffCumArr/noInvestArr
+    # Accumulated gain that respect to the previous invested amount (the baseline)
+    gainDiffCumArr <- fArr-c(noInvestArr[1],noInvestArr[1:(length(noInvestArr)-1)]) - c(0,diff(noInvestArr))
+    gainPercCumArr <- gainDiffCumArr/c(noInvestArr[1],noInvestArr[1:(length(noInvestArr)-1)])
     gainPercCumArr[is.infinite(gainPercCumArr)] <- NA
     payoutStr<- num2CommasNumString(d*v/ifelse(ud,12,1),2)
     
     # list output
-    list(noinvest = noInvestStr, invest = investStr, investArr = fArr, investArrBase = fArrBase, noInvestArr = noInvestArr,
+    list(noinvest = noInvestStr, invest = investStr, investArr = fArr, noInvestArr = noInvestArr,
          gainNoInvFund = gainNoInvFundStr, gainNoInvFundc = gainNoInvFundPercStr,
          gainInvFund = gainInvFundStr, gainInvFundPerc = gainInvFundPercStr,
          gain = gainStr, gainPerc = gainPercStr, 
