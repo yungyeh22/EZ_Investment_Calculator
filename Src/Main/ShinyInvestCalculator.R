@@ -84,7 +84,7 @@ ui <- shinyUI(fluidPage(
   
   # Sidebar with a slider input for number of bins 
   tags$style(type="text/css", 
-             '.textGroup { display:inline-table}',
+             '.textGroup { display:inline-block ; margin-right:10px ; vertical-align: top;}',
              '.shiny-input-container label {display:hidden}',
              '.form-group {margin:0}',
              '.inputText {margin-bottom:10px}',
