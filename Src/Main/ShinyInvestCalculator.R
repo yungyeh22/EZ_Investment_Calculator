@@ -30,10 +30,21 @@ commasNumString2num <- function (x) {
 cal.compound <- function (f, v, r, b = 0, d = 0, ur = 12, ub = 1, ud = 1) { # ur = 1, 3, 6, 12
   fArr <- matrix(vector(mode = "numeric", length = (v + 1)*2),nrow = 2) # Initiate
   fArr[,1] <- f
+  # Rules
+  # Compounding is calculated at each term
+  # Fund increas or decrease happens after each term (after compounding rate calculation)
+  # If no money to take, stop calculation and place zero for the rest of terms
   for (inc in 1:v) {
     # Compounding rate
     fArr[1,inc+1] <- fArr[2,inc] * (1+r)
     # Increase/decrese fund
+    # In case no fund to be Withdrawal
+    if (!((((ub == ud) & ub) & (!ub & ud)) & (inc%%12 == 0)))  { #There are only two cases that doesn't need to consider
+      if ((fArr[1,inc+1] - d) <= 0) {
+        break
+      }
+    }
+    # Do the math
     if ((ub == ud) & (ub == TRUE)) { #case1: yearly,yearly
       if (inc%%12 == 0) { # Check at every year end for yearly change
         fArr[2,inc+1] <- max((fArr[1,inc+1] - d),0) + b # Withdrawal takes place first then add new fund
