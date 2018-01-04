@@ -227,13 +227,14 @@ server <- shinyServer(function(input, output,session) {
     gainPercStr <- num2CommasNumString(max((finalF-noInvest)/noInvest,-1)*100,2)
     # gainDiff = (Current - previous base - contribution)
     gainDiffArr <- c(0,diff(fArr)) - c(0,diff(noInvestArr))
+    gainDiffArr <- apply(as.array(gainDiffArr),1,max,0)
     gainPercArr <- gainDiffArr/c(fArr[1],fArr[1:(length(fArr)-1)])
     gainPercArr[is.infinite(gainPercArr)] <- NA
     # Accumulated gain that respect to the previous invested amount (the baseline)
     gainDiffCumArr <- fArr-c(noInvestArr[1],noInvestArr[1:(length(noInvestArr)-1)]) - c(0,diff(noInvestArr))
     gainPercCumArr <- gainDiffCumArr/c(noInvestArr[1],noInvestArr[1:(length(noInvestArr)-1)])
     gainPercCumArr[is.infinite(gainPercCumArr)] <- NA
-    payoutStr<- num2CommasNumString(d*v/ifelse(ud,12,1),2)
+    payoutStr<- num2CommasNumString(d*v/ifelse(ud,12,1)+finalF,2)
     
     # list output
     list(noinvest = noInvestStr, invest = investStr, investArr = fArr, noInvestArr = noInvestArr,
